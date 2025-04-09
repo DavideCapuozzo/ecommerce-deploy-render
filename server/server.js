@@ -27,7 +27,7 @@ app.use( //Metodo per aggiungere middleware all'applicazione
         methods : ['GET', 'POST', 'DELETE', 'PUT'],
         allowedHeaders : [
             "Content-Type",
-            "Auttorization",
+            "Authorization",
             "Cache-Control",
             "Expires",
             "Pragma"
