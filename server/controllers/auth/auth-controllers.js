@@ -6,18 +6,18 @@ const User = require('../../models/User')
 
 //register
 
-exports.registerUser = async(req, res) =>{
-    const {userName, email, password} = req.body;
+exports.registerUser = async (req, res) => {
+    const { userName, email, password } = req.body;
 
     try {
 
-        const checkUser = await User.findOne({email});
-        if(checkUser) return res.json({success: false, message: 'User Already Exist whit same Email, please try again'});
+        const checkUser = await User.findOne({ email });
+        if (checkUser) return res.json({ success: false, message: 'User Already Exist whit same Email, please try again' });
 
         const hashPassword = await bcrypt.hash(password, 12);
         const newUser = new User({
-            userName, 
-            email, 
+            userName,
+            email,
             password: hashPassword,
         })
 
@@ -26,7 +26,7 @@ exports.registerUser = async(req, res) =>{
             success: true,
             message: "Registration Succesfully",
         })
-        
+
     } catch (e) {
         console.log(e)
         res.status(500).json({
@@ -38,21 +38,21 @@ exports.registerUser = async(req, res) =>{
 
 //login
 
-exports.loginUser = async(req, res) =>{
+exports.loginUser = async (req, res) => {
 
-    const {email, password} = req.body;
-    
-    
+    const { email, password } = req.body;
+
+
     try {
 
-        const checkUser = await User.findOne({email});
-        if(!checkUser) return res.json({
-            success: false, 
-            message: 'Email dosent exist, please try again or register' 
+        const checkUser = await User.findOne({ email });
+        if (!checkUser) return res.json({
+            success: false,
+            message: 'Email dosent exist, please try again or register'
         });
-        
+
         const checkPasswordMatch = await bcrypt.compare(password, checkUser.password);
-        if(!checkPasswordMatch) return res.json({
+        if (!checkPasswordMatch) return res.json({
             success: false,
             message: 'Incorrect password! Please try again'
         });
@@ -60,17 +60,17 @@ exports.loginUser = async(req, res) =>{
 
         const token = jwt.sign(
             {
-                id:checkUser._id, 
-                role: checkUser.role, 
-                email:checkUser.email,
-                userName:checkUser.userName
-            }, 
-            'CLIENT_SECRET_KEY', 
-            {expiresIn: '60m'}
+                id: checkUser._id,
+                role: checkUser.role,
+                email: checkUser.email,
+                userName: checkUser.userName
+            },
+            'CLIENT_SECRET_KEY',
+            { expiresIn: '60m' }
         );
-    
-        
-        res.cookie('token', token, {httpOnly: true, secure:true}).json({
+
+
+        /* res.cookie('token', token, {httpOnly: true, secure:true}).json({
             success: true,
             message: 'Login Successfully',
             user:{
@@ -79,8 +79,20 @@ exports.loginUser = async(req, res) =>{
                 id:checkUser._id,
                 userName:checkUser.userName
             }
-        });
-        
+        }); */
+
+        res.status(200).json({
+            success: true,
+            message: 'Logged in Succesfully',
+            token,
+            user: {
+                email: checkUser.email,
+                role: checkUser.role,
+                id: checkUser._id,
+                userName: checkUser.userName
+            }
+        })
+
     } catch (e) {
         console.log(e)
         res.status(500).json({
@@ -93,7 +105,7 @@ exports.loginUser = async(req, res) =>{
 
 //loginOut
 
-exports.logoutUser = (req, res) =>{
+exports.logoutUser = (req, res) => {
     res.clearCookie('token').json({
         success: true,
         message: 'Logout Successfully',
@@ -102,7 +114,7 @@ exports.logoutUser = (req, res) =>{
 
 
 //middleware... crea un altra cartella con all'interno tutte le regole di middleware
-exports.authMiddleware = async(req, res, next) => {
+/* exports.authMiddleware = async(req, res, next) => {
     const token = req.cookies.token;
     if(!token) return res.status(401).json({
         success: false,
@@ -114,6 +126,26 @@ exports.authMiddleware = async(req, res, next) => {
         req.user = decoded;
         next()
     } catch(error){
+        res.status(401).json({
+            success: false,
+            message: 'Unauthorised User'
+        })
+    }
+} */
+
+exports.authMiddleware = async (req, res, next) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split('')[1]
+    if (!token) return res.status(401).json({
+        success: false,
+        message: 'Unauthorised User'
+    })
+
+    try {
+        const decoded = jwt.verify(token, 'CLIENT_SECRET_KEY');
+        req.user = decoded;
+        next()
+    } catch (error) {
         res.status(401).json({
             success: false,
             message: 'Unauthorised User'
